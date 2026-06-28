@@ -5,14 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vigía de Sismos</title>
   <style>
-    body { font-family: system-ui, sans-serif; display: grid; place-content: center;
-           min-height: 100vh; margin: 0; text-align: center; padding: 1rem; }
-    h1 { margin: 0 0 .5rem; }
-    p { color: #555; margin: 0; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem;
+           max-width: 700px; margin-inline: auto; color: #1a1a1a; }
+    h1 { margin: 0 0 .25rem; }
+    .sub { color: #666; margin: 0 0 1.5rem; }
+    .quake { border-top: 1px solid #eee; padding: .8rem 0; display: flex; gap: 1rem; align-items: baseline; }
+    .mag { font-weight: 700; font-size: 1.2rem; min-width: 3rem; }
+    .place { flex: 1; }
+    .place a { color: inherit; text-decoration: none; }
+    .place a:hover { text-decoration: underline; }
+    .time { color: #888; font-size: .85rem; }
+    .estado { color: #666; padding: 1rem 0; }
   </style>
 </head>
 <body>
   <h1>Vigía de Sismos</h1>
-  <p>Próximamente: mapa y avisos de terremotos en tiempo real.</p>
+  <p class="sub">Terremotos de magnitud 2.5+ en el mundo, últimas 24 horas. Fuente: USGS.</p>
+  <div id="lista"><p class="estado">Cargando terremotos…</p></div>
+
+  <script>
+    const FEED = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
+    const lista = document.getElementById("lista");
+
+    async function cargar() {
+      try {
+        const res = await fetch(FEED);
+        if (!res.ok) throw new Error("respuesta " + res.status);
+        const datos = await res.json();
+        const sismos = datos.features.sort((a, b) => b.properties.time - a.properties.time);
+
+        if (sismos.length === 0) {
+          lista.innerHTML = '<p class="estado">No hay terremotos de magnitud 2.5+ en las últimas 24 horas.</p>';
+          return;
+        }
+
+        lista.innerHTML = sismos.map(s => {
+          const p = s.properties;
+          const mag = p.mag != null ? p.mag.toFixed(1) : "—";
+          const fecha = new Date(p.time).toLocaleString("es-ES");
+          return `<div class="quake">
+            <span class="mag">${mag}</span>
+            <span class="place"><a href="${p.url}" target="_blank" rel="noopener">${p.place || "Lugar desconocido"}</a></span>
+            <span class="time">${fecha}</span>
+          </div>`;
+        }).join("");
+      } catch (e) {
+        lista.innerHTML = '<p class="estado">No se pudieron cargar los datos. Reintenta en unos minutos.</p>';
+      }
+    }
+
+    cargar();
+  </script>
 </body>
 </html>
